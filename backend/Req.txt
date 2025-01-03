@@ -1,0 +1,6 @@
+flask
+fastembed
+langchain_community
+pdfplumber
+chromadb
+flask-cors
