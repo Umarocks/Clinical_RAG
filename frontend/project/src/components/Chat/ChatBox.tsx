@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Message } from "./Message";
 import { ChatInput } from "./ChatInput";
 
@@ -15,8 +15,12 @@ interface ResponseData {
   answer: string; // Adjust this based on the expected response structure
   error?: string; // If your API might return an error message
 }
-
-export function ChatBox() {
+interface Source {
+  page_content: string;
+  page_number: number;
+  source: string;
+}
+export function ChatBox({ setSharedData }: any) {
   const [response, setResponse] = useState<ResponseData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [input, setInput] = useState("");
@@ -40,15 +44,13 @@ export function ChatBox() {
       }
 
       const data = await res.json();
-      // Replace newlines (\n) with <br> tags
-      // const formatted = data.answer.replace(/\\n/g, "<br>");
       let formatted = data.answer;
       // Replace **text** or *text* or ***text*** with <b>text</b>
       formatted = formatted.replace(/\*+([^*]+)\*+/g, "<b>$1</b>");
-      // console.log({ answer: formatted });
-
       setResponse({ answer: formatted });
-      console.log(response);
+      const sharedData = data.sources;
+      setSharedData(sharedData);
+      return response;
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -76,12 +78,12 @@ export function ChatBox() {
       setMessages((prev) => [
         ...prev,
         {
-          text: response?.answer || error || "I'm sorry, Some Error Occured1.",
+          text: response?.answer || error || "I'm sorry, Some Error Occured.",
           type: "assistant",
           timestamp: new Date(),
         },
       ]);
-    }, 1000);
+    }, 4000);
     setInput("");
   };
 

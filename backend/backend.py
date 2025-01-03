@@ -63,8 +63,8 @@ def askPDFPost():
     retriever = vector_store.as_retriever(
         search_type="similarity_score_threshold",
         search_kwargs={
-            "k": 10,
-            "score_threshold": 0.3,
+            "k": 5,
+            "score_threshold": 0.4,
         },
     )
 
@@ -78,7 +78,7 @@ def askPDFPost():
     sources = []
     for doc in result["context"]:
         sources.append(
-            {"source": doc.metadata["source"], "page_content": doc.page_content,"page_number":doc.metadata["page"]-11}
+             {"title": doc.metadata["source"].replace("../PDF/", ""),"type":"Medical Protocol", "page_content": doc.page_content,"relevance":doc.metadata["page"]-11}
         )
         doc.metadata
 
