@@ -4,3 +4,5 @@ langchain_community
 pdfplumber
 chromadb
 flask-cors
+pdf2image
+PyPDF2

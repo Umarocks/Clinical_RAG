@@ -6,6 +6,7 @@ export function SourcePanel({ sharedData }: any) {
   interface Source {
     title: string;
     page_content: string;
+    page_image: string;
     relevance: number;
     type: string;
   }

@@ -3,6 +3,7 @@ import { Link2, BookOpen } from "lucide-react";
 
 interface SourceCardProps {
   page_content: string;
+  page_image: string;
   relevance: number;
   title: string;
   type: string;
@@ -10,11 +11,31 @@ interface SourceCardProps {
 
 export function SourceCard({
   page_content, // Page content as it is, we can show that on a tab on click after wards
+  page_image,
   relevance,
   title,
   type,
 }: SourceCardProps) {
   const [sourceContentFlag, setSourceContentFlag] = React.useState(false);
+
+  const setSourceContentImageFlagfunction = () => {
+    const base64String = page_image;
+    var image = new Image();
+    image.src = "data:image/png;base64," + base64String;
+
+    const newTab = window.open();
+    if (newTab) {
+      newTab.document.body.appendChild(image);
+      image.style.maxWidth = "100%";
+      image.style.maxHeight = "100%";
+      image.style.objectFit = "contain";
+    } else {
+      console.error(
+        "Failed to open a new tab. Please allow pop-ups in your browser."
+      );
+    }
+  };
+
   return (
     <>
       <div className="p-6 space-y-4">
@@ -29,13 +50,20 @@ export function SourceCard({
                 <p className="text-sm text-gray-600 mt-1">{type}</p>
                 {/* <p className="text-xs text-gray-500 mt-1">Updated: {lastUpdated}</p> */}
                 <button
-                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1 mt-2"
                   onClick={() => setSourceContentFlag(!sourceContentFlag)}
                 >
                   <Link2 size={14} />
-                  View protocol
+                  View Text
+                </button>
+                <button
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1 mt-2"
+                  onClick={() => setSourceContentImageFlagfunction()}
+                >
+                  <Link2 size={14} />
+                  View Page
                 </button>
               </div>
             </div>
