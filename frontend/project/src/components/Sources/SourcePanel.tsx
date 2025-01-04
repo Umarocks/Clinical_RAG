@@ -23,11 +23,9 @@ export function SourcePanel({ sharedData }: any) {
         </p>
       </div>
 
-      <div className="p-6 space-y-4">
-        {sharedData?.map((source: Source, index: number) => (
-          <SourceCard key={index} {...source} />
-        ))}
-      </div>
+      {sharedData?.map((source: Source, index: number) => (
+        <SourceCard key={index} {...source} />
+      ))}
     </div>
   );
 }
