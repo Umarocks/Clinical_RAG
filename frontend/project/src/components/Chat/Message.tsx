@@ -26,7 +26,7 @@ export function Message({ text, type, timestamp }: MessageProps) {
           }`}
           style={{ whiteSpace: "pre-wrap", lineHeight: "1.5" }}
         >
-          {text}
+          <span>{text}</span>
         </div>
         <span className="text-xs text-gray-500 mt-1">
           {timestamp.toLocaleTimeString([], {

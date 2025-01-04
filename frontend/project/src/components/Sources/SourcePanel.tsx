@@ -3,35 +3,12 @@ import { SourceCard } from "./SourceCard";
 import { FileText } from "lucide-react";
 
 export function SourcePanel({ sharedData }: any) {
-  // const [sampleSources, setSampleSources] = useState([
-  //   {
-  //     title: "Clinical Practice Guidelines",
-  //     page_content: "https://www.example.com/guidelines",
-  //     relevance: 95,
-  //     type: "Medical Protocol",
-  //   },
-  //   {
-  //     title: "Clinical Practice Guidelines",
-  //     page_content: "https://www.example.com/guidelines",
-  //     relevance: 95,
-  //     type: "Medical Protocol",
-  //   },
-  //   {
-  //     title: "Clinical Practice Guidelines",
-  //     page_content: "https://www.example.com/guidelines",
-  //     relevance: 95,
-  //     type: "Medical Protocol",
-  //   },
-  // ]);
   interface Source {
     title: string;
     page_content: string;
     relevance: number;
     type: string;
   }
-
-  console.log(sharedData);
-  // console.log(sampleSources);
   return (
     <div className="h-full bg-gray-50">
       <div className="p-4 border-b border-gray-100 bg-white">

@@ -46,11 +46,10 @@ export function ChatBox({ setSharedData }: any) {
       const data = await res.json();
       let formatted = data.answer;
       // Replace **text** or *text* or ***text*** with <b>text</b>
-      formatted = formatted.replace(/\*+([^*]+)\*+/g, "<b>$1</b>");
       setResponse({ answer: formatted });
       const sharedData = data.sources;
       setSharedData(sharedData);
-      return response;
+      return { answer: formatted };
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -73,12 +72,13 @@ export function ChatBox({ setSharedData }: any) {
     setMessages([...messages, newMessage]);
     // Simulate response
 
-    await fetchData();
+    const resultAPI = await fetchData();
+    console.log(resultAPI);
     setTimeout(() => {
       setMessages((prev) => [
         ...prev,
         {
-          text: response?.answer || error || "I'm sorry, Some Error Occured.",
+          text: resultAPI?.answer || error || "I'm sorry, Some Error Occured.",
           type: "assistant",
           timestamp: new Date(),
         },
