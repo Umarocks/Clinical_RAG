@@ -8,21 +8,27 @@ from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_retrieval_chain
 from langchain.prompts import PromptTemplate
 from flask_cors import CORS
+from langchain.embeddings import OpenAIEmbeddings
 from pdf2image import convert_from_path
-import base64
+from langchain_openai import ChatOpenAI
 from io import BytesIO
 from PyPDF2 import PdfReader, PdfWriter
 from pdf2image import convert_from_path
 import os
 import base64
+import openai
 
 app = Flask(__name__)
 CORS(app) 
 folder_path = "db"
+with open("../OPEN_AI_API.txt", "r") as file:
+    os.environ["OPENAI_API_KEY"] = file.read().strip()  
+    # openai.api_key = file.read().strip()
+client = openai.OpenAI() 
+# cached_llm = Ollama(model="llama3")
+cached_llm = ChatOpenAI(model="gpt-4o")
 
-cached_llm = Ollama(model="llama3")
-
-embedding = FastEmbedEmbeddings()
+embedding = OpenAIEmbeddings()
 
 text_splitter = RecursiveCharacterTextSplitter(
     chunk_size=1024, chunk_overlap=80, length_function=len, is_separator_regex=False
@@ -135,40 +141,90 @@ def askPDFPost():
 
     sources = []
     for doc in result["context"]:
-        pdfJson = process_pdf_page(doc.metadata["source"], doc.metadata["page"]-1);
+        pdfJson = process_pdf_page(doc.metadata["source"], doc.metadata["page"]+1);
         sources.append(
              {"title": doc.metadata["source"].replace("../PDF/", ""),"type":"Medical Protocol", "page_image":pdfJson,"page_content":doc.page_content ,"relevance":doc.metadata["page"]-11}
         )
         doc.metadata
 
     response_answer = {"answer": result["answer"], "sources": sources}
-    # response_answer = {"sources": sources}
+    
     return response_answer
+
+
+# @app.route("/pdf", methods=["POST"])
+# def pdfPost():
+
+#     loader = PDFPlumberLoader("../PDF/RPHCM_CPM_Manual_5thEd.pdf")
+#     docs = loader.load_and_split()
+#     print(f"docs len={len(docs)}")
+
+#     chunks = text_splitter.split_documents(docs)
+#     print(f"chunks len={len(chunks)}")
+
+#     vector_store = Chroma.from_documents(
+#         documents=chunks, embedding=embedding, persist_directory=folder_path
+#     )
+
+#     vector_store.persist()
+
+#     response = {
+#         "status": "Successfully Uploaded",
+#         "doc_len": len(docs),
+#         "chunks": len(chunks),
+#         "page1": docs[0].page_content,
+#     }
+#     return response
+
+
 
 
 @app.route("/pdf", methods=["POST"])
 def pdfPost():
+    try:
+        # Load and split PDF documents
+        loader = PDFPlumberLoader("../PDF/RPHCM_CPM_Manual_5thEd.pdf")
+        docs = loader.load_and_split()
+        print(f"docs len={len(docs)}")
 
-    loader = PDFPlumberLoader("../PDF/RPHCM_CPM_Manual_5thEd.pdf")
-    docs = loader.load_and_split()
-    print(f"docs len={len(docs)}")
+        # Split documents into smaller chunks
+        chunks = text_splitter.split_documents(docs)
+        print(f"chunks len={len(chunks)}")
 
-    chunks = text_splitter.split_documents(docs)
-    print(f"chunks len={len(chunks)}")
+        # Generate embeddings using OpenAI API
 
-    vector_store = Chroma.from_documents(
-        documents=chunks, embedding=embedding, persist_directory=folder_path
-    )
+        chunk_texts = [chunk.page_content for chunk in chunks]
+        # embeddings = []
+        # for text in chunk_texts:
+        #     response = openai.embeddings.create(
+        #         model="text-embedding-3-small",
+        #         input=text
+        #     ).data[0].embedding
+        #     # embeddings.append(response["data"][0]["embedding"])
+        #     embedding = response
+        #     embeddings.append(embedding)
+        # print(f"embeddings len={len(embeddings)}")
+        # Create vector store using OpenAI embeddings
+        vector_store = Chroma.from_documents(
+            documents=chunks,
+            embedding=embedding,
+            persist_directory="./db"
+        )
 
-    vector_store.persist()
+        # # Persist vector store
+        # vector_store.persist()
 
-    response = {
-        "status": "Successfully Uploaded",
-        "doc_len": len(docs),
-        "chunks": len(chunks),
-        "page1": docs[0].page_content,
-    }
-    return response
+        # Prepare response
+        response = {
+            "status": "Successfully Uploaded",
+            "doc_len": len(docs),
+            "chunks": len(chunks),
+            "page1": docs[0].page_content,
+        }
+        return response, 200
+
+    except Exception as e:
+        return {"status": "Error", "message": str(e)}, 500
 
 
 def start_app():
