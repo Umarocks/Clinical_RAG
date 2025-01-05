@@ -20,7 +20,7 @@ function App() {
           <div className="lg:col-span-2 bg-white rounded-lg shadow-sm overflow-hidden">
             <ChatBox setSharedData={setSharedData} />
           </div>
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div className="bg-white rounded-lg shadow-sm overflow-scroll">
             <SourcePanel sharedData={sharedData} />
           </div>
         </div>

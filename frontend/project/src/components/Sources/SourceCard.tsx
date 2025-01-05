@@ -9,6 +9,11 @@ interface SourceCardProps {
   type: string;
 }
 
+interface requestData {
+  pdf_path: string;
+  page_number: number;
+}
+
 export function SourceCard({
   page_content, // Page content as it is, we can show that on a tab on click after wards
   page_image,
@@ -18,11 +23,25 @@ export function SourceCard({
 }: SourceCardProps) {
   const [sourceContentFlag, setSourceContentFlag] = React.useState(false);
 
-  const setSourceContentImageFlagfunction = () => {
-    const base64String = page_image;
+  const setSourceContentImageFlagfunction = async () => {
+    const requestData: requestData = {
+      pdf_path: title,
+      page_number: relevance,
+    };
+    // console.log(requestData);
+    const res = await fetch("http://127.0.0.1:5000/get_pdf_page", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestData),
+    });
+    const result = await res.json();
+    // console.log(result);
+    const base64String = result.page_image;
     var image = new Image();
     image.src = "data:image/png;base64," + base64String;
-
+    // console.log(page_image);
     const newTab = window.open();
     if (newTab) {
       newTab.document.body.appendChild(image);

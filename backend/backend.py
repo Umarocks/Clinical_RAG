@@ -28,7 +28,7 @@ client = openai.OpenAI()
 # cached_llm = Ollama(model="llama3")
 cached_llm = ChatOpenAI(model="gpt-4o")
 
-embedding = OpenAIEmbeddings()
+embedding = OpenAIEmbeddings(model="text-embedding-3-small")
 
 text_splitter = RecursiveCharacterTextSplitter(
     chunk_size=1024, chunk_overlap=80, length_function=len, is_separator_regex=False
@@ -50,7 +50,9 @@ os.makedirs(TEMP_FOLDER, exist_ok=True)
 
 POPPLER_PATH = "C:/poppler-24.08.0/Library/bin"  # Update with your Poppler path
 
-def process_pdf_page(pdf_path, page_number, poppler_path=POPPLER_PATH):
+@app.route("/get_pdf_page", methods=["POST"])
+def get_pdf_page_Post(poppler_path=POPPLER_PATH):
+
     """
     Extracts a specific page from a PDF, converts it to an image, and encodes it to Base64.
 
@@ -62,6 +64,23 @@ def process_pdf_page(pdf_path, page_number, poppler_path=POPPLER_PATH):
     Returns:
         dict: Contains the Base64-encoded image and file name.
     """
+    json_content = request.json
+    pdf_path = json_content.get("pdf_path")
+
+    page_number = json_content.get("page_number")
+
+    # pdf_path = request.args.get("pdf_path")
+    # page_number = int(request.args.get("page_number"))
+    if(pdf_path == "Clinical Validation and Documentation for Coding _eCDCG25_eBook.pdf"):
+        page_number+=4
+    if(pdf_path == "ICD_Cm_Expert_for_Hospitals.pdf"):
+        page_number+=16
+    if(pdf_path == "DRG Expert _2025_eBook.pdf"):
+        page_number+=4
+    if(pdf_path == "Coders Desk Reference for ICD 10 CM Diagnoses eITDRD25_eBook.pdf"):
+        page_number+=8
+    pdf_path="../PDF/Clinical Documentation/Clinical Documentation/"+pdf_path
+    
     try:
         # Validate file existence
         if not os.path.exists(pdf_path):
@@ -91,8 +110,7 @@ def process_pdf_page(pdf_path, page_number, poppler_path=POPPLER_PATH):
         os.remove(temp_pdf_path)
         os.remove(output_image_path)
 
-        return encoded_image
-
+        return jsonify({"page_image": encoded_image })
     except Exception as e:
         return {"error": str(e)}
     
@@ -121,14 +139,14 @@ def askPDFPost():
     print(f"query: {query}")
 
     print("Loading vector store")
-    vector_store = Chroma(persist_directory=folder_path, embedding_function=embedding)
+    vector_store = Chroma(persist_directory="./db/", embedding_function=embedding)
 
     print("Creating chain")
     retriever = vector_store.as_retriever(
         search_type="similarity_score_threshold",
         search_kwargs={
-            "k": 5,
-            "score_threshold": 0.4,
+            "k": 10,
+            "score_threshold": 0.2,
         },
     )
 
@@ -141,40 +159,19 @@ def askPDFPost():
 
     sources = []
     for doc in result["context"]:
-        pdfJson = process_pdf_page(doc.metadata["source"], doc.metadata["page"]+1);
-        sources.append(
-             {"title": doc.metadata["source"].replace("../PDF/", ""),"type":"Medical Protocol", "page_image":pdfJson,"page_content":doc.page_content ,"relevance":doc.metadata["page"]-11}
+        # pdfJson = process_pdf_page(doc.metadata["source"], doc.metadata["page"]+1);
+        # sources.append(
+        #      {"title": doc.metadata["source"].replace("../PDF/Clinical Documentation/Clinical Documentation/", ""),"type":"Medical Protocol", "page_image":pdfJson,"page_content":doc.page_content ,"relevance":doc.metadata["page"]-11}
+        # )
+         sources.append(
+             {"title": doc.metadata["source"].replace("../PDF/Clinical Documentation/Clinical Documentation/", ""),"type":"Medical Protocol", "page_image":"pdfJson","page_content":doc.page_content ,"relevance":doc.metadata["page"]-11}
         )
-        doc.metadata
+        
+        # doc.metadata
 
     response_answer = {"answer": result["answer"], "sources": sources}
     
     return response_answer
-
-
-# @app.route("/pdf", methods=["POST"])
-# def pdfPost():
-
-#     loader = PDFPlumberLoader("../PDF/RPHCM_CPM_Manual_5thEd.pdf")
-#     docs = loader.load_and_split()
-#     print(f"docs len={len(docs)}")
-
-#     chunks = text_splitter.split_documents(docs)
-#     print(f"chunks len={len(chunks)}")
-
-#     vector_store = Chroma.from_documents(
-#         documents=chunks, embedding=embedding, persist_directory=folder_path
-#     )
-
-#     vector_store.persist()
-
-#     response = {
-#         "status": "Successfully Uploaded",
-#         "doc_len": len(docs),
-#         "chunks": len(chunks),
-#         "page1": docs[0].page_content,
-#     }
-#     return response
 
 
 
@@ -183,7 +180,8 @@ def askPDFPost():
 def pdfPost():
     try:
         # Load and split PDF documents
-        loader = PDFPlumberLoader("../PDF/RPHCM_CPM_Manual_5thEd.pdf")
+        loader = PDFPlumberLoader("../PDF/Clinical Documentation/Clinical Documentation/ICD_Cm_Expert_for_Hospitals.pdf")
+        print("loader loaded")
         docs = loader.load_and_split()
         print(f"docs len={len(docs)}")
 
@@ -194,16 +192,7 @@ def pdfPost():
         # Generate embeddings using OpenAI API
 
         chunk_texts = [chunk.page_content for chunk in chunks]
-        # embeddings = []
-        # for text in chunk_texts:
-        #     response = openai.embeddings.create(
-        #         model="text-embedding-3-small",
-        #         input=text
-        #     ).data[0].embedding
-        #     # embeddings.append(response["data"][0]["embedding"])
-        #     embedding = response
-        #     embeddings.append(embedding)
-        # print(f"embeddings len={len(embeddings)}")
+
         # Create vector store using OpenAI embeddings
         vector_store = Chroma.from_documents(
             documents=chunks,
@@ -212,7 +201,7 @@ def pdfPost():
         )
 
         # # Persist vector store
-        # vector_store.persist()
+        vector_store.persist()
 
         # Prepare response
         response = {

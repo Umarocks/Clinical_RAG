@@ -9,3 +9,4 @@ PyPDF2
 openai
 tiktoken
 langchain-openai
+PyCryptodome 
