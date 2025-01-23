@@ -1,19 +1,29 @@
 from flask import Flask, request,jsonify
-from langchain_community.llms import Ollama
-from langchain_community.vectorstores import Chroma
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
-from langchain_community.document_loaders import PDFPlumberLoader
+
+# from langchain_community.vectorstores import Chroma
+# from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_text_splitters import CharacterTextSplitter
+from langchain_community.vectorstores import FAISS
+from langchain import hub
+# from langchain_community.document_loaders import PDFPlumberLoader
+# from langchain_community.document_loaders import PyPDFLoader
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_retrieval_chain
 from langchain.prompts import PromptTemplate
 from flask_cors import CORS
-from langchain.embeddings import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from pdf2image import convert_from_path
 from langchain_openai import ChatOpenAI
+from langchain import hub
 from io import BytesIO
 from PyPDF2 import PdfReader, PdfWriter
-from pdf2image import convert_from_path
+from transformers import AutoTokenizer
+# from docling.document_converter import DocumentConverter
+from docling.chunking import HybridChunker
+from langchain_docling.loader import ExportType
+from langchain_docling import DoclingLoader
+from langchain_text_splitters import MarkdownHeaderTextSplitter
+
 import os
 import base64
 import openai
@@ -23,16 +33,17 @@ CORS(app)
 folder_path = "db"
 with open("../OPEN_AI_API.txt", "r") as file:
     os.environ["OPENAI_API_KEY"] = file.read().strip()  
-    # openai.api_key = file.read().strip()
+os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
 client = openai.OpenAI() 
 # cached_llm = Ollama(model="llama3")
 cached_llm = ChatOpenAI(model="gpt-4o")
-
+tokenizer =   AutoTokenizer.from_pretrained("gpt2-large")
 embedding = OpenAIEmbeddings(model="text-embedding-3-small")
 
-text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=1024, chunk_overlap=80, length_function=len, is_separator_regex=False
-)
+# text_splitter = RecursiveCharacterTextSplitter(
+#     chunk_size=1024, chunk_overlap=80, length_function=len, is_separator_regex=False
+# )
+text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=50, separator="\n")
 
 raw_prompt = PromptTemplate.from_template(
     """ 
@@ -139,82 +150,150 @@ def askPDFPost():
     print(f"query: {query}")
 
     print("Loading vector store")
-    vector_store = Chroma(persist_directory="./db/", embedding_function=embedding)
-
-    print("Creating chain")
-    retriever = vector_store.as_retriever(
-        search_type="similarity_score_threshold",
-        search_kwargs={
-            "k": 10,
-            "score_threshold": 0.2,
-        },
+    # vector_store = Chroma(persist_directory="./db/", embedding_function=embedding)
+    vector_store = FAISS.load_local(
+        "faiss_index", embedding, allow_dangerous_deserialization=True
     )
-
-    document_chain = create_stuff_documents_chain(cached_llm, raw_prompt)
-    chain = create_retrieval_chain(retriever, document_chain)
-
-    result = chain.invoke({"input": query})
+    print("vector store loaded")
+    raw_prompt = hub.pull("langchain-ai/retrieval-qa-chat")
+    print("Creating chain")
+    # retriever = vector_store.as_retriever(
+    #     search_type="similarity_score_threshold",
+    #     search_kwargs={
+    #         "k": 10,
+    #         "score_threshold": 0.2,
+    #     },
+    # )
+    print("retreiver created")
+    combine_docs_chain = create_stuff_documents_chain(
+       cached_llm, raw_prompt
+    )
+    # document_chain = create_stuff_documents_chain(cached_llm, raw_prompt)
+    print("document chain created")
+    # chain = create_retrieval_chain(retriever, document_chain)
+    print("chain created")
+    retrieval_chain = create_retrieval_chain(
+       vector_store.as_retriever(kwargs=2), combine_docs_chain
+    )
+    result = retrieval_chain.invoke({"input": query, "context": vector_store})
 
     print(result)
 
     sources = []
-    for doc in result["context"]:
-        # pdfJson = process_pdf_page(doc.metadata["source"], doc.metadata["page"]+1);
-        # sources.append(
-        #      {"title": doc.metadata["source"].replace("../PDF/Clinical Documentation/Clinical Documentation/", ""),"type":"Medical Protocol", "page_image":pdfJson,"page_content":doc.page_content ,"relevance":doc.metadata["page"]-11}
-        # )
-         sources.append(
-             {"title": doc.metadata["source"].replace("../PDF/Clinical Documentation/Clinical Documentation/", ""),"type":"Medical Protocol", "page_image":"pdfJson","page_content":doc.page_content ,"relevance":doc.metadata["page"]-11}
-        )
+    # for doc in result["context"]:
+    #     # pdfJson = process_pdf_page(doc.metadata["source"], doc.metadata["page"]+1);
+    #     # sources.append(
+    #     #      {"title": doc.metadata["source"].replace("../PDF/Clinical Documentation/Clinical Documentation/", ""),"type":"Medical Protocol", "page_image":pdfJson,"page_content":doc.page_content ,"relevance":doc.metadata["page"]-11}
+    #     # )
+    #      sources.append(
+    #          {"title": doc.metadata["source"].replace("../PDF/Clinical Documentation/Clinical Documentation/", ""),"type":"Medical Protocol", "page_image":"pdfJson","page_content":doc.page_content ,"relevance":doc.metadata["page"]-11}
+    #     )
         
         # doc.metadata
 
-    response_answer = {"answer": result["answer"], "sources": sources}
+    # response_answer = {"answer": result["answer"], "sources": sources}
+    response_answer = {"answer": result["answer"]}
     
     return response_answer
 
 
 
+# @app.route("/pdf", methods=["POST"])
+# def pdfPost():
+#     try:
+#         # Load and split PDF documents
+#         EXPORT_TYPE = ExportType.MARKDOWN
+#         FILE_PATH = "../PDF/Clinical Documentation/Clinical Documentation/Clinical Validation and Documentation for Coding _eCDCG25_eBook.pdf"
+#         # loader =  DocumentConverter().convert("../PDF/Clinical Documentation/Clinical Documentation/DRG Expert _2025_eBook.pdf")
+#         # print("loader loaded")
+#         # docs = loader
+#         # print(f"docs len={len(docs)}")
+#         loader = DoclingLoader(
+#             file_path=FILE_PATH,
+#             export_type=EXPORT_TYPE,
+#             chunker=HybridChunker(tokenizer=embedding.tokenizer),
+#         )
+
+#         docs = loader.load()
+#         splitter = MarkdownHeaderTextSplitter(
+#                 headers_to_split_on=[
+#                     ("#", "Header_1"),
+#                     ("##", "Header_2"),
+#                     ("###", "Header_3"),
+#                 ],
+#             )
+#         splits = [split for doc in docs for split in splitter.split_text(doc.page_content)]
+#         # Split documents into smaller chunks
+#         # chunks = text_splitter.split_documents(docs)
+#         # chunker = HybridChunker(tokenizer=AutoTokenizer.from_pretrained(embedding));
+#         # # print(f"chunks len={len(chunks)}")
+
+#         # # Generate embeddings using OpenAI API
+
+#         # chunk_texts = [chunk.page_content for chunk in chunks]
+
+#         # # Create vector store using OpenAI embeddings
+#         # # vector_store = Chroma.from_documents(
+#         # #     documents=chunks,
+#         # #     embedding=embedding,
+#         # #     persist_directory="./db"
+#         # # )
+#         vector_store = FAISS.from_documents(splits, embedding)
+#         vector_store.save_local("faiss_index")
+        
+
+#         # # Persist vector store
+#         # vector_store.persist()
+
+#         # Prepare response
+#         response = {
+#             "status": "Successfully Uploaded",
+#             "doc_len": len(docs),
+#             "chunks": len(splits),
+#             "page1": docs[0].page_content,
+#         }
+#         return response, 200
+
+#     except Exception as e:
+#         return {"status": "Error", "message": str(e)}, 500
 
 @app.route("/pdf", methods=["POST"])
 def pdfPost():
     try:
         # Load and split PDF documents
-        loader = PDFPlumberLoader("../PDF/Clinical Documentation/Clinical Documentation/ICD_Cm_Expert_for_Hospitals.pdf")
-        print("loader loaded")
-        docs = loader.load_and_split()
-        print(f"docs len={len(docs)}")
-
-        # Split documents into smaller chunks
-        chunks = text_splitter.split_documents(docs)
-        print(f"chunks len={len(chunks)}")
-
-        # Generate embeddings using OpenAI API
-
-        chunk_texts = [chunk.page_content for chunk in chunks]
-
-        # Create vector store using OpenAI embeddings
-        vector_store = Chroma.from_documents(
-            documents=chunks,
-            embedding=embedding,
-            persist_directory="./db"
+        EXPORT_TYPE = ExportType.MARKDOWN
+        FILE_PATH = "../PDF/Clinical Documentation/Clinical Documentation/Coders Desk Reference for ICD 10 CM Diagnoses eITDRD25_eBook.pdf"
+        loader = DoclingLoader(
+            file_path=FILE_PATH,
+            export_type=EXPORT_TYPE,
+            chunker=HybridChunker(tokenizer=tokenizer),
         )
 
-        # # Persist vector store
-        vector_store.persist()
+        docs = loader.load()
+        splitter = MarkdownHeaderTextSplitter(
+                headers_to_split_on=[
+                    ("#", "Header_1"),
+                    ("##", "Header_2"),
+                    ("###", "Header_3"),
+                ],
+            )
+        splits = [split for doc in docs for split in splitter.split_text(doc.page_content)]
 
+        vector_store = FAISS.from_documents(splits, embedding)
+        vector_store.save_local("faiss_index")
         # Prepare response
         response = {
             "status": "Successfully Uploaded",
             "doc_len": len(docs),
-            "chunks": len(chunks),
+            "chunks": len(splits),
             "page1": docs[0].page_content,
         }
         return response, 200
+        
 
     except Exception as e:
         return {"status": "Error", "message": str(e)}, 500
-
+    
 
 def start_app():
     app.run()
