@@ -23,6 +23,7 @@ from docling.chunking import HybridChunker
 from langchain_docling.loader import ExportType
 from langchain_docling import DoclingLoader
 from langchain_text_splitters import MarkdownHeaderTextSplitter
+from langchain.schema import Document
 
 import os
 import base64
@@ -37,7 +38,8 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
 client = openai.OpenAI() 
 # cached_llm = Ollama(model="llama3")
 cached_llm = ChatOpenAI(model="gpt-4o")
-tokenizer =   AutoTokenizer.from_pretrained("gpt2-large")
+# tokenizer =   AutoTokenizer.from_pretrained("gpt2-large")
+tokenizer = "sentence-transformers/all-MiniLM-L6-v2"
 embedding = OpenAIEmbeddings(model="text-embedding-3-small")
 
 # text_splitter = RecursiveCharacterTextSplitter(
@@ -178,21 +180,23 @@ def askPDFPost():
     result = retrieval_chain.invoke({"input": query, "context": vector_store})
 
     print(result)
-
+    for res in result:
+        print(res)
+        print(f"* {res.page_content} [{res.metadata}]")
     sources = []
-    # for doc in result["context"]:
-    #     # pdfJson = process_pdf_page(doc.metadata["source"], doc.metadata["page"]+1);
-    #     # sources.append(
-    #     #      {"title": doc.metadata["source"].replace("../PDF/Clinical Documentation/Clinical Documentation/", ""),"type":"Medical Protocol", "page_image":pdfJson,"page_content":doc.page_content ,"relevance":doc.metadata["page"]-11}
-    #     # )
-    #      sources.append(
-    #          {"title": doc.metadata["source"].replace("../PDF/Clinical Documentation/Clinical Documentation/", ""),"type":"Medical Protocol", "page_image":"pdfJson","page_content":doc.page_content ,"relevance":doc.metadata["page"]-11}
-    #     )
+    for doc in result["context"]:
+        # pdfJson = process_pdf_page(doc.metadata["source"], doc.metadata["page"]+1);
+        # sources.append(
+        #      {"title": doc.metadata["source"].replace("../PDF/Clinical Documentation/Clinical Documentation/", ""),"type":"Medical Protocol", "page_image":pdfJson,"page_content":doc.page_content ,"relevance":doc.metadata["page"]-11}
+        # )
+        sources.append(
+             {"title": doc.metadata["source"].replace("../PDF/Clinical Documentation/Clinical Documentation/", ""),"type":"Medical Protocol", "page_image":"pdfJson","page_content":doc.page_content ,"relevance":doc.metadata.prov["page_no"]}
+        )
         
         # doc.metadata
 
-    # response_answer = {"answer": result["answer"], "sources": sources}
-    response_answer = {"answer": result["answer"]}
+    response_answer = {"answer": result["answer"], "sources": sources}
+    # response_answer = {"answer": result["answer"]}
     
     return response_answer
 
@@ -261,8 +265,8 @@ def askPDFPost():
 def pdfPost():
     try:
         # Load and split PDF documents
-        EXPORT_TYPE = ExportType.MARKDOWN
-        FILE_PATH = "../PDF/Clinical Documentation/Clinical Documentation/Coders Desk Reference for ICD 10 CM Diagnoses eITDRD25_eBook.pdf"
+        EXPORT_TYPE = ExportType.DOC_CHUNKS
+        FILE_PATH = "../PDF/Clinical Documentation/Clinical Documentation/A1.pdf"
         loader = DoclingLoader(
             file_path=FILE_PATH,
             export_type=EXPORT_TYPE,
@@ -270,17 +274,48 @@ def pdfPost():
         )
 
         docs = loader.load()
+        # splits = docs
         splitter = MarkdownHeaderTextSplitter(
-                headers_to_split_on=[
-                    ("#", "Header_1"),
-                    ("##", "Header_2"),
-                    ("###", "Header_3"),
-                ],
-            )
-        splits = [split for doc in docs for split in splitter.split_text(doc.page_content)]
-
+        headers_to_split_on=[
+            ("#", "Header_1"),
+            ("##", "Header_2"),
+            ("###", "Header_3"),
+        ],
+        )
+        splits = []
+        for doc in docs:
+            # Split the document content with header metadata
+            doc_splits = splitter.split_text(doc.page_content)
+            
+            # Add position-aware metadata
+            for split_idx, split in enumerate(doc_splits):
+                # Merge existing metadata with header metadata
+                merged_metadata = {
+                    **doc.metadata,              # Original document metadata
+                    **split.metadata,            # Header metadata from markdown
+                    "split_id": split_idx + 1,   # Add position information
+                    "total_splits": len(doc_splits),
+                    "parent_doc": doc.metadata.get("source", FILE_PATH)
+                }
+                
+                # Create new document with combined information
+                new_doc = Document(
+                    page_content=split.page_content,
+                    metadata=merged_metadata
+                )
+                splits.append(new_doc)
+        # print(splits)
+        for d in splits[:2]:
+            print(f"- {d}")
+            print("...")
+        print("Loading vector store")
         vector_store = FAISS.from_documents(splits, embedding)
         vector_store.save_local("faiss_index")
+        
+
+        # # Persist vector store
+        # vector_store.persist()
+
         # Prepare response
         response = {
             "status": "Successfully Uploaded",
@@ -296,8 +331,10 @@ def pdfPost():
     
 
 def start_app():
-    app.run()
+    app.run(debug=True)
 
 
 if __name__ == "__main__":
     start_app()
+
+    
