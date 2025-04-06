@@ -2,6 +2,10 @@
 
 An AI-based assistant designed to simplify and accelerate clinical documentation and coding workflows using **Retrieval-Augmented Generation (RAG)**. Ask natural-language questions related to clinical documentation, diagnosis codes, or compliance — and get precise answers backed by source references and medical documentation visuals.
 
+
+![Demo](https://files.catbox.moe/5na67n.png)
+
+
 ---
 
 ## 🚀 Features
@@ -18,10 +22,20 @@ An AI-based assistant designed to simplify and accelerate clinical documentation
   - 📘 Reference book or documentation guide  
   - 🖼️ Relevant image snippets (when available)
 
+
+
+https://github.com/user-attachments/assets/24cc8f2d-7753-46dd-839f-b5230be5f684
+
+
+
 - **⏱️ Speeds Up Documentation & Coding**  
   - Physicians can ensure complete and compliant clinical notes.  
   - Coders can clarify vague documentation and retrieve coding guidelines faster.  
   - CDIS teams can improve accuracy and reduce queries.
+
+
+![Demo](https://files.catbox.moe/c36h89.png)
+
 
 ---
 
@@ -60,6 +74,10 @@ An AI-based assistant designed to simplify and accelerate clinical documentation
    - ✅ Clean, concise answer  
    - 🔗 Reference text with metadata  
    - 🖼️ Image snippet from source (if available)
+  
+
+![Demo](https://files.catbox.moe/n4u14w.png)
+
 
 ---
 
@@ -103,7 +121,7 @@ Feel free to fork this repo, raise issues, or submit pull requests.
 For demos, feature requests, or collaboration:  
 📧 **Email:** umar.a.aziz2001@gmail.com 
 🌐 **Github:** [Github](https://github.com/Umarocks)]  
-📘 **LinkedIn:** [linkedin.com/in/umarocks/]
+📘 **LinkedIn:** [LinkedIn](https://linkedin.com/in/umarocks/)]
 
 ---
 
