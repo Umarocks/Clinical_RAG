@@ -49,7 +49,7 @@ export function ChatBox({ setSharedData }: any) {
       setResponse({ answer: formatted });
       const sharedData = data.sources;
       setSharedData(sharedData);
-      console.log(sharedData);
+      // console.log(sharedData);
       return { answer: formatted };
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -74,7 +74,7 @@ export function ChatBox({ setSharedData }: any) {
     // Simulate response
 
     const resultAPI = await fetchData();
-    console.log(resultAPI);
+    // console.log(resultAPI);
     setTimeout(() => {
       setMessages((prev) => [
         ...prev,

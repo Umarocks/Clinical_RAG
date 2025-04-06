@@ -79,21 +79,22 @@ def get_pdf_page_Post(poppler_path=POPPLER_PATH):
     """
     json_content = request.json
     pdf_path = json_content.get("pdf_path")
+    # page_number = [3,4]
+    page_numbers = json_content.get("page_number", [])
 
-    page_number = json_content.get("page_number")
-
+    page_number_offset=0
     # pdf_path = request.args.get("pdf_path")
     # page_number = int(request.args.get("page_number"))
     if(pdf_path == "Clinical Validation and Documentation for Coding _eCDCG25_eBook.pdf"):
-        page_number+=4
+        page_number_offset+=4
     if(pdf_path == "ICD_Cm_Expert_for_Hospitals.pdf"):
-        page_number+=16
+        page_number_offset+=16
     if(pdf_path == "DRG Expert _2025_eBook.pdf"):
-        page_number+=4
+        page_number_offset+=4
     if(pdf_path == "Coders Desk Reference for ICD 10 CM Diagnoses eITDRD25_eBook.pdf"):
-        page_number+=8
+        page_number_offset+=8
     pdf_path="../PDF/Clinical Documentation/Clinical Documentation/"+pdf_path
-    
+    encoded_image = []
     try:
         # Validate file existence
         if not os.path.exists(pdf_path):
@@ -106,22 +107,23 @@ def get_pdf_page_Post(poppler_path=POPPLER_PATH):
         # Extract the specified page
         reader = PdfReader(pdf_path)
         writer = PdfWriter()
-        writer.add_page(reader.pages[page_number - 1])  # Convert to zero-indexed
-        with open(temp_pdf_path, "wb") as f:
-            writer.write(f)
+        for page_number in page_numbers:
+            writer.add_page(reader.pages[page_number - 1])  # Convert to zero-indexed
+            with open(temp_pdf_path, "wb") as f:
+                writer.write(f)
 
-        # Convert the extracted page to an image
-        pages = convert_from_path(temp_pdf_path, 500, poppler_path=poppler_path)
-        converted_page = pages[0]
-        converted_page.save(output_image_path, "JPEG")
+            # Convert the extracted page to an image
+            pages = convert_from_path(temp_pdf_path, 500, poppler_path=poppler_path)
+            converted_page = pages[0]
+            converted_page.save(output_image_path, "JPEG")
 
-        # Encode the image to Base64
-        with open(output_image_path, "rb") as img_file:
-            encoded_image = base64.b64encode(img_file.read()).decode("utf-8")
+            # Encode the image to Base64
+            with open(output_image_path, "rb") as img_file:
+                encoded_image.append(base64.b64encode(img_file.read()).decode("utf-8"))
 
-        # Clean up temporary files
-        os.remove(temp_pdf_path)
-        os.remove(output_image_path)
+            # Clean up temporary files
+            os.remove(temp_pdf_path)
+            os.remove(output_image_path)
 
         return jsonify({"page_image": encoded_image })
     except Exception as e:
@@ -200,16 +202,20 @@ def askPDFPost():
         # sources.append(
         #      {"title": doc.metadata["source"].replace("../PDF/Clinical Documentation/Clinical Documentation/", ""),"type":"Medical Protocol", "page_image":pdfJson,"page_content":doc.page_content ,"relevance":doc.metadata["page"]-11}
         # )
+        page_no = []
+        for item in doc.metadata['dl_meta']['doc_items']:
+            for prov in item['prov']:
+                page_no.append(prov['page_no'])
         sources.append(
             {
                 "title": doc.metadata["source"].replace("../PDF/Clinical Documentation/Clinical Documentation/", ""),
                 "type": "Medical Protocol",
                 "page_image": "pdfJson",  # Adjust this line
                 "page_content": doc.page_content,
-                "relevance": doc.metadata['dl_meta']['doc_items'][0]['prov'][0]['page_no']  # Adjust this line
+                "relevance": list(set(page_no))  # Ensure only unique page numbers are included
             }
         )
-        print(f"Page {doc.metadata['dl_meta']['doc_items'][0]['prov'][0]['page_no']}:")
+        print(sources)
         print("....\n\n\n")
     # for doc in result['context']:
     #     page_content = doc.get('page_content', '')
@@ -316,6 +322,7 @@ def pdfPost():
             # Add position-aware metadata
             for split_idx, split in enumerate(doc_splits):
                 # Merge existing metadata with header metadata
+                # print(f"doc.metadata={doc.metadata}")
                 merged_metadata = {
                     **doc.metadata,              # Original document metadata
                     **split.metadata,            # Header metadata from markdown

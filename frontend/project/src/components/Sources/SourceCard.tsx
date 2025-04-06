@@ -23,7 +23,7 @@ export function SourceCard({
 }: SourceCardProps) {
   const [sourceContentFlag, setSourceContentFlag] = React.useState(false);
   const [showImage, setShowImage] = React.useState(false);
-  const [sourceImage, setSourceImage] = React.useState<any>();
+  const [sourceImage, setSourceImage] = React.useState<any>([]);
   const setSourceContentImageFlagfunction = async () => {
     if(!showImage) {
       const requestData: requestData = {
@@ -39,23 +39,17 @@ export function SourceCard({
         body: JSON.stringify(requestData),
       });
       const result = await res.json();
-      // console.log(result);
-      const base64String = result.page_image;
-      var image = new Image();
-      image.src = "data:image/png;base64," + base64String;
-      setSourceImage(image);
-      // console.log(page_image);
-      // const newTab = window.open();
-      // if (newTab) {
-      //   newTab.document.body.appendChild(image);
-      //   image.style.maxWidth = "100%";
-      //   image.style.maxHeight = "100%";
-      //   image.style.objectFit = "contain";
-      // } else {
-      //   console.error(
-      //     "Failed to open a new tab. Please allow pop-ups in your browser."
-      //   );
-      // }
+      console.log(result);
+      const base64Images = result.page_image; // Assuming result.page_images is an array of base64 strings
+      const images = base64Images.map((base64String: string) => {
+        const image = new Image();
+        image.src = "data:image/png;base64," + base64String;
+        return image;
+      });
+      console.log(images);
+      // setSourceImage(images[0]); // Set the first image or handle as needed
+      setSourceImage(images);
+
       setShowImage(!showImage);
     }
     else{
@@ -94,11 +88,14 @@ export function SourceCard({
                   <Link2 size={14} />
                   View Page
                 </button>
-                {showImage && ( <img
-                src={sourceImage.src}
-                alt="Page Image"
-                style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
-              />)}
+                {showImage && sourceImage.map((image: any, index: number) => (
+                  <img
+                    key={index}
+                    src={image.src}
+                    alt={`Image ${index}`}
+                    className="w-full h-auto mt-2"
+                  />
+                ))}
               </div>
             </div>
             <span className="bg-blue-50 text-blue-700 text-xs font-medium px-2.5 py-1 rounded-full ">
