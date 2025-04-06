@@ -22,37 +22,47 @@ export function SourceCard({
   type,
 }: SourceCardProps) {
   const [sourceContentFlag, setSourceContentFlag] = React.useState(false);
-
+  const [showImage, setShowImage] = React.useState(false);
+  const [sourceImage, setSourceImage] = React.useState<any>();
   const setSourceContentImageFlagfunction = async () => {
-    const requestData: requestData = {
-      pdf_path: title,
-      page_number: relevance,
-    };
-    // console.log(requestData);
-    const res = await fetch("http://127.0.0.1:5000/get_pdf_page", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(requestData),
-    });
-    const result = await res.json();
-    // console.log(result);
-    const base64String = result.page_image;
-    var image = new Image();
-    image.src = "data:image/png;base64," + base64String;
-    // console.log(page_image);
-    const newTab = window.open();
-    if (newTab) {
-      newTab.document.body.appendChild(image);
-      image.style.maxWidth = "100%";
-      image.style.maxHeight = "100%";
-      image.style.objectFit = "contain";
-    } else {
-      console.error(
-        "Failed to open a new tab. Please allow pop-ups in your browser."
-      );
+    if(!showImage) {
+      const requestData: requestData = {
+        pdf_path: title,
+        page_number: relevance,
+      };
+      // console.log(requestData);
+      const res = await fetch("http://127.0.0.1:5000/get_pdf_page", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestData),
+      });
+      const result = await res.json();
+      // console.log(result);
+      const base64String = result.page_image;
+      var image = new Image();
+      image.src = "data:image/png;base64," + base64String;
+      setSourceImage(image);
+      // console.log(page_image);
+      // const newTab = window.open();
+      // if (newTab) {
+      //   newTab.document.body.appendChild(image);
+      //   image.style.maxWidth = "100%";
+      //   image.style.maxHeight = "100%";
+      //   image.style.objectFit = "contain";
+      // } else {
+      //   console.error(
+      //     "Failed to open a new tab. Please allow pop-ups in your browser."
+      //   );
+      // }
+      setShowImage(!showImage);
     }
+    else{
+      setShowImage(!showImage);
+    }
+    return
+   
   };
 
   return (
@@ -84,6 +94,11 @@ export function SourceCard({
                   <Link2 size={14} />
                   View Page
                 </button>
+                {showImage && ( <img
+                src={sourceImage.src}
+                alt="Page Image"
+                style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
+              />)}
               </div>
             </div>
             <span className="bg-blue-50 text-blue-700 text-xs font-medium px-2.5 py-1 rounded-full ">
