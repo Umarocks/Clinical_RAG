@@ -92,7 +92,17 @@ export function SourceCard({
                   <img
                     key={index}
                     src={image.src}
-                    alt={`Image ${index}`}
+                    alt={`Image ${image}`}
+                    onClick={( )=>{
+                      var newImage = new Image();
+                      newImage.src = image.src;
+                        const newTab = window.open();
+                        if (newTab) {
+                        newTab.document.body.style.margin = "0";
+                        newTab.document.body.style.backgroundColor = "#000";
+                        newTab.document.body.appendChild(newImage);
+                        }
+                    }}
                     className="w-full h-auto mt-2"
                   />
                 ))}

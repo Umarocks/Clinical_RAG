@@ -298,7 +298,7 @@ def pdfPost():
     try:
         # Load and split PDF documents
         EXPORT_TYPE = ExportType.DOC_CHUNKS
-        FILE_PATH = "../PDF/Clinical Documentation/Clinical Documentation/A1.pdf"
+        FILE_PATH = "../PDF/Clinical Documentation/Clinical Documentation/Clinical Validation and Documentation for Coding _eCDCG25_eBook.pdf"
         loader = DoclingLoader(
             file_path=FILE_PATH,
             export_type=EXPORT_TYPE,
