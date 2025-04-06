@@ -49,6 +49,7 @@ export function ChatBox({ setSharedData }: any) {
       setResponse({ answer: formatted });
       const sharedData = data.sources;
       setSharedData(sharedData);
+      console.log(sharedData);
       return { answer: formatted };
     } catch (err: unknown) {
       if (err instanceof Error) {

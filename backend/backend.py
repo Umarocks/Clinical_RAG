@@ -179,21 +179,47 @@ def askPDFPost():
     )
     result = retrieval_chain.invoke({"input": query, "context": vector_store})
 
-    print(result)
-    for res in result:
-        print(res)
-        print(f"* {res.page_content} [{res.metadata}]")
+    # print(result)
+    # for res in result[:2]:
+    #     print(res)
+    #     print("...\n\n")
     sources = []
+    # for doc in result["context"]:
+    #     # pdfJson = process_pdf_page(doc.metadata["source"], doc.metadata["page"]+1);
+    #     # sources.append(
+    #     #      {"title": doc.metadata["source"].replace("../PDF/Clinical Documentation/Clinical Documentation/", ""),"type":"Medical Protocol", "page_image":pdfJson,"page_content":doc.page_content ,"relevance":doc.metadata["page"]-11}
+    #     # )
+    #     sources.append(
+    #          {"title": doc.metadata["source"].replace("../PDF/Clinical Documentation/Clinical Documentation/", ""),"type":"Medical Protocol", "page_image":"pdfJson","page_content":doc.page_content ,"relevance":doc.metadata.prov["page_no"]}
+    #     )
+        
+    #     # doc.metadata
+
     for doc in result["context"]:
-        # pdfJson = process_pdf_page(doc.metadata["source"], doc.metadata["page"]+1);
+        # pdfJson = get_pdf_page_Post(doc.metadata["source"], doc['metadata']['dl_meta']['doc_items'][0]['prov'][0]['page_no']);
         # sources.append(
         #      {"title": doc.metadata["source"].replace("../PDF/Clinical Documentation/Clinical Documentation/", ""),"type":"Medical Protocol", "page_image":pdfJson,"page_content":doc.page_content ,"relevance":doc.metadata["page"]-11}
         # )
         sources.append(
-             {"title": doc.metadata["source"].replace("../PDF/Clinical Documentation/Clinical Documentation/", ""),"type":"Medical Protocol", "page_image":"pdfJson","page_content":doc.page_content ,"relevance":doc.metadata.prov["page_no"]}
+            {
+                "title": doc.metadata["source"].replace("../PDF/Clinical Documentation/Clinical Documentation/", ""),
+                "type": "Medical Protocol",
+                "page_image": "pdfJson",  # Adjust this line
+                "page_content": doc.page_content,
+                "relevance": doc.metadata['dl_meta']['doc_items'][0]['prov'][0]['page_no']  # Adjust this line
+            }
         )
-        
-        # doc.metadata
+        print(f"Page {doc.metadata['dl_meta']['doc_items'][0]['prov'][0]['page_no']}:")
+        print("....\n\n\n")
+    # for doc in result['context']:
+    #     page_content = doc.get('page_content', '')
+    #     try:
+    #         page_no = doc['metadata']['dl_meta']['doc_items'][0]['prov'][0]['page_no']
+    #     except (KeyError, IndexError):
+    #         page_no = 'Unknown'
+    #     print(f"Page {page_no}:")
+    #     print(page_content)
+    #     print("-" * 50)
 
     response_answer = {"answer": result["answer"], "sources": sources}
     # response_answer = {"answer": result["answer"]}
@@ -305,7 +331,7 @@ def pdfPost():
                 )
                 splits.append(new_doc)
         # print(splits)
-        for d in splits[:2]:
+        for d in splits[:1]:
             print(f"- {d}")
             print("...")
         print("Loading vector store")
@@ -322,6 +348,7 @@ def pdfPost():
             "doc_len": len(docs),
             "chunks": len(splits),
             "page1": docs[0].page_content,
+
         }
         return response, 200
         
